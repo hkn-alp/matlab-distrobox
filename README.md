@@ -19,7 +19,7 @@ This architecture is explicitly designed for immutable operating systems (like N
 
 1. **Clone the repository:**
 ```bash
-git clone [https://github.com/hkn-alp/matlab-distrobox.git](https://github.com/hkn-alp/matlab-distrobox.git)
+git clone https://github.com/hkn-alp/matlab-distrobox.git
 cd matlab-distrobox
 
 ```
