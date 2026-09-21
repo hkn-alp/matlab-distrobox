@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="astro"
+IMAGE="docker.io/library/ubuntu:24.04"
+
+# Base Paths (aligned with isolated Btrfs subvolume)
+CONTAINER_STORAGE="$HOME/.local/share/containers"
+CONTAINER_HOME="$CONTAINER_STORAGE/distrobox-homes/$CONTAINER_NAME"
+APPS_DIR="$CONTAINER_STORAGE/apps"
+MATLAB_DIR="$APPS_DIR/matlab"
+MATLAB_RELEASE="R2026a"
+
+echo "📁 Ensuring required host directories exist..."
+mkdir -p "$CONTAINER_HOME" "$APPS_DIR" "$MATLAB_DIR" "$HOME/.local/share/applications"
+
+# 1. Create Distrobox Container
+if ! distrobox list | grep -q "$CONTAINER_NAME"; then
+    echo "🚀 Creating Distrobox container: ${CONTAINER_NAME}..."
+    distrobox create \
+        --name "$CONTAINER_NAME" \
+        --image "$IMAGE" \
+        --nvidia \
+        --home "$CONTAINER_HOME" \
+        --volume "$APPS_DIR:/opt/apps:rw" \
+        -Y
+else
+    echo "ℹ️ Container ${CONTAINER_NAME} already exists. Skipping creation."
+fi
+
+# 2. Install System Dependencies & MPM
+echo "📦 Installing Ubuntu 24.04 dependencies and mpm..."
+distrobox enter "$CONTAINER_NAME" -- bash -c '
+sudo apt update && sudo apt install -y \
+    software-properties-common libatomic1 libgl1 libglu1-mesa \
+    libxi6 libxrender1 libxtst6 libxrandr2 \
+    libgstreamer1.0-0 gstreamer1.0-plugins-base libgomp1 \
+    openjdk-11-jre libpcre2-32-0 \
+    adwaita-icon-theme gnome-themes-extra gsfonts wmctrl \
+    libgtk-3-0t64 libcanberra-gtk3-module \
+    dbus-x11 libasound2t64 libnspr4 libnss3
+
+    sudo add-apt-repository ppa:deadsnakes/ppa -y
+    sudo apt update && sudo apt install -y python3.12 python3.12-dev python3.12-venv
+
+    if [ ! -f /usr/local/bin/mpm ]; then
+        echo "⬇️ Downloading MATLAB Package Manager (mpm)..."
+        sudo curl -fsSL https://www.mathworks.com/mpm/glnxa64/mpm -o /usr/local/bin/mpm
+        sudo chmod +x /usr/local/bin/mpm
+    fi
+'
+
+# 3. Automatic Repository MPM Installation
+echo ""
+read -rp "Do you want to run mpm install now? [y/N]: " RUN_MPM
+if [[ "$RUN_MPM" =~ ^[Yy]$ ]]; then
+    # Automatically locate the input file in the repository folder
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    DEFAULT_INPUT_FILE="$SCRIPT_DIR/mpm-input-r2026a.txt"
+
+    if [ -f "$DEFAULT_INPUT_FILE" ]; then
+        echo "⏳ Installing MATLAB via mpm using repository configuration (this will take several minutes)..."
+        # Copy to the isolated container home
+        cp "$DEFAULT_INPUT_FILE" "$CONTAINER_HOME/mpm_input.txt"
+
+        distrobox enter "$CONTAINER_NAME" -- bash -c "
+            mpm install --inputfile ~/mpm_input.txt
+        "
+    else
+        echo "⚠️ File not found at '$DEFAULT_INPUT_FILE'. Skipping installation step."
+    fi
+fi
+
+# 4. Create Modern Host Wrapper / Launcher
+echo "⚙️ Creating host launcher wrapper in ${MATLAB_DIR}/matlab-launcher.sh..."
+cat << 'MATLAB_LAUNCH_EOF' > "$MATLAB_DIR/matlab-launcher.sh"
+#!/usr/bin/env bash
+FILE_PATH="${1:-}"
+
+# Native Wayland flags for Chromium-embedded/modern MATLAB UI
+export GDK_BACKEND=wayland,x11
+export QT_QPA_PLATFORM="wayland;xcb"
+
+if [ -n "$FILE_PATH" ]; then
+    ABS_PATH=$(realpath "$FILE_PATH")
+    case "${ABS_PATH##*.}" in
+        fig)
+            CMD="try openfig('$ABS_PATH'); catch; end"
+            ;;
+        mat)
+            CMD="try evalin('base', 'load(''$ABS_PATH'')'); catch; end"
+            ;;
+        *)
+            CMD="try matlab.desktop.editor.openDocument('$ABS_PATH'); catch; end"
+            ;;
+    esac
+    exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -r "$CMD"
+else
+    exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop
+fi
+MATLAB_LAUNCH_EOF
+
+chmod +x "$MATLAB_DIR/matlab-launcher.sh"
+
+# 5. Create Desktop Entry on the Host
+echo "🖥️ Generating host .desktop entry..."
+cat << MATLAB_DESKTOP_EOF > "$HOME/.local/share/applications/astro-matlab.desktop"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MATLAB (Astro)
+Comment=MATLAB Technical Computing Environment
+Exec=$MATLAB_DIR/matlab-launcher.sh %F
+Icon=$MATLAB_DIR/R2026a/ui/icons/16x16/matlabLogo.svg
+StartupWMClass=MATLAB R2026a
+Terminal=false
+Categories=Science;Education;Development;
+MimeType=text/x-matlab;application/matlab;
+MATLAB_DESKTOP_EOF
+
+# 6. Update Caches
+echo "🔄 Updating desktop and MIME caches..."
+update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
+if [ -d "$HOME/.local/share/icons" ]; then
+    gtk-update-icon-cache -f -t "$HOME/.local/share/icons/" 2>/dev/null || true
+fi
+
+echo "✅ Environment configured! You can launch MATLAB via your desktop launcher or '$MATLAB_DIR/matlab-launcher.sh'."
