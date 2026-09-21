@@ -30,8 +30,8 @@ Open `mpm-input-r2026a.txt` and uncomment the specific toolboxes you need (e.g.,
 Make the script executable and run it:
 
 ```bash
-chmod +x setup-matlab.sh
-./setup-matlab.sh
+chmod +x setup-matlab
+./setup-matlab
 
 ```
 
@@ -42,7 +42,7 @@ Once installed, launch MATLAB from your host desktop application grid or via the
 
 ## File Structure
 
-* `setup-matlab.sh`: The core deployment script. Handles dependencies, container creation, and host integration.
+* `setup-matlab`: The core deployment script. Handles dependencies, container creation, and host integration.
 * `mpm-input-r2026a.txt`: The configuration file dictating which products and toolboxes `mpm` will download. Safe to share publicly (contains no keys or personal data).
 
 ## Future Roadmap
