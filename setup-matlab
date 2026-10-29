@@ -125,7 +125,8 @@ Icon=$MATLAB_DIR/R2026a/ui/icons/16x16/matlabLogo.svg
 StartupWMClass=MATLAB R2026a
 Terminal=false
 Categories=Science;Education;Development;
-MimeType=text/x-matlab;application/matlab;application/x-matlab-data;
+Categories=Science;Education;Development;
+MimeType=text/x-matlab;application/matlab;application/x-matlab-data;application/vnd.mathworks.simulink.model;
 MATLAB_DESKTOP_EOF
 
 # 6. Update Caches
