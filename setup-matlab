@@ -72,8 +72,8 @@ if [[ "$RUN_MPM" =~ ^[Yy]$ ]]; then
 fi
 
 # 4. Create Modern Host Wrapper / Launcher
-echo "⚙️ Creating host launcher wrapper in ${MATLAB_DIR}/matlab-launcher.sh..."
-cat << 'MATLAB_LAUNCH_EOF' > "$MATLAB_DIR/matlab-launcher.sh"
+echo "⚙️ Creating host launcher wrapper in ${MATLAB_DIR}/matlab-launcher..."
+cat << 'MATLAB_LAUNCH_EOF' > "$MATLAB_DIR/matlab-launcher"
 #!/usr/bin/env bash
 FILE_PATH="${1:-}"
 
@@ -83,24 +83,18 @@ export QT_QPA_PLATFORM="wayland;xcb"
 
 if [ -n "$FILE_PATH" ]; then
     ABS_PATH=$(realpath "$FILE_PATH")
-    case "${ABS_PATH##*.}" in
-        fig)
-            CMD="try openfig('$ABS_PATH'); catch; end"
-            ;;
-        mat)
-            CMD="try evalin('base', 'load(''$ABS_PATH'')'); catch; end"
-            ;;
-        *)
-            CMD="try matlab.desktop.editor.openDocument('$ABS_PATH'); catch; end"
-            ;;
-    esac
+    # Escape single quotes in file paths for MATLAB string safety
+    ESCAPED_PATH="${ABS_PATH//\'/\'\'}"
+    
+    CMD="try uiopen('$ESCAPED_PATH', true); catch ME; disp(ME.message); end"
+    
     exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -r "$CMD"
 else
     exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop
 fi
 MATLAB_LAUNCH_EOF
 
-chmod +x "$MATLAB_DIR/matlab-launcher.sh"
+chmod +x "$MATLAB_DIR/matlab-launcher"
 
 # 5. Create Desktop Entry on the Host
 echo "🖥️ Generating host .desktop entry..."
