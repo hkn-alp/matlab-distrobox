@@ -101,10 +101,21 @@ export MATLAB_CEF_ARGS="--force-dark-mode --enable-features=WebUIDarkMode"
 
 if [ -n "$FILE_PATH" ]; then
     ABS_PATH=$(realpath "$FILE_PATH")
-    ESCAPED_PATH="${ABS_PATH//\'/\'\'}"
-    CMD="try uiopen('$ESCAPED_PATH', true); catch ME; disp(ME.message); end"
 
-    exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash -r "$CMD"
+    if [ -d "$ABS_PATH" ]; then
+        # Target is a directory: just start MATLAB in that directory
+        exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash -sd "$ABS_PATH"
+    else
+        # Target is a file: extract parent directory, start there, and open the file
+        DIR_PATH=$(dirname "$ABS_PATH")
+        ESCAPED_FILE="${ABS_PATH//\'/\'\'}"
+        ESCAPED_DIR="${DIR_PATH//\'/\'\'}"
+
+        # Combine cd() inside -r with -sd as a fallback so Startup settings don't override it
+        CMD="try cd('$ESCAPED_DIR'); uiopen('$ESCAPED_FILE', true); catch ME; disp(ME.message); end"
+
+        exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash -sd "$DIR_PATH" -r "$CMD"
+    fi
 else
     exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash
 fi
