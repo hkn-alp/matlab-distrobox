@@ -25,7 +25,7 @@ cd matlab-distrobox
 ```
 
 2. **Configure your Toolboxes:**
-Open `mpm-input-r2026a.txt` and uncomment the specific toolboxes you need (e.g., `product.Aerospace_Toolbox`, `product.Optimization_Toolbox`).
+Open `mpm-input.txt` and uncomment the specific toolboxes you need (e.g., `product.Aerospace_Toolbox`, `product.Optimization_Toolbox`).
 3. **Run the Installer:**
 Make the script executable and run it:
 
@@ -43,7 +43,7 @@ Once installed, launch MATLAB from your host desktop application grid or via the
 ## File Structure
 
 * `setup-matlab`: The core deployment script. Handles dependencies, container creation, and host integration.
-* `mpm-input-r2026a.txt`: The configuration file dictating which products and toolboxes `mpm` will download. Safe to share publicly (contains no keys or personal data).
+* `mpm-input.txt`: The configuration file dictating which products and toolboxes `mpm` will download. Safe to share publicly (contains no keys or personal data).
 
 ## Future Roadmap
 
