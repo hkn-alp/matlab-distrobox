@@ -71,7 +71,7 @@ echo ""
 read -rp "Do you want to run mpm install now? [y/N]: " RUN_MPM
 if [[ "$RUN_MPM" =~ ^[Yy]$ ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    DEFAULT_INPUT_FILE="$SCRIPT_DIR/mpm-input.txt"
+    DEFAULT_INPUT_FILE="$SCRIPT_DIR/mpm-input-${MATLAB_RELEASE,,}.txt"
 
     if [ -f "$DEFAULT_INPUT_FILE" ]; then
         echo "⏳ Installing MATLAB via mpm using repository configuration..."
