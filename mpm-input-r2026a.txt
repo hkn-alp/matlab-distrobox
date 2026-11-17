@@ -69,7 +69,7 @@
 ## Set the desired value for destinationFolder and
 ## uncomment the following line.
 
-destinationFolder=/opt/apps/matlab/R2026a
+destinationFolder=/opt/apps/matlab/R2026b
 
 ########################################################################
 ## SUPPORT PACKAGE DESTINATION
@@ -488,4 +488,4 @@ product.Geoid_Data_for_Aerospace_Toolbox
 ## check the integrity of the input file. Changing the value
 ## of the checksum field invalidates this input file.
 
-?checksum=UjIwMjZh
+?checksum=UjIwMjZi
