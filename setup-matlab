@@ -75,16 +75,18 @@ if [[ "$RUN_MPM" =~ ^[Yy]$ ]]; then
 
     if [ -f "$DEFAULT_INPUT_FILE" ]; then
         echo "⏳ Installing MATLAB via mpm using repository configuration..."
-        cp "$DEFAULT_INPUT_FILE" "$CONTAINER_HOME/mpm_input.txt"
-
-        # Dynamically override the destination folder to match MATLAB_RELEASE
-        sed -i "s|^destinationFolder=.*|destinationFolder=/opt/apps/matlab/${MATLAB_RELEASE}|" "$CONTAINER_HOME/mpm_input.txt"
         
-        # Strip the checksum line so MPM doesn't reject it for version mismatch
-        sed -i '/^?checksum=/d' "$CONTAINER_HOME/mpm_input.txt"
+        # Copy to the exact name that the subsequent sed commands expect
+        cp "$DEFAULT_INPUT_FILE" "$CONTAINER_HOME/mpm-input-${MATLAB_RELEASE,,}.txt"
 
+        # Dynamically override the destination folder to match MATLAB_RELEASE (handles commented lines too)
+        sed -i "s|^#*[[:space:]]*destinationFolder=.*|destinationFolder=/opt/apps/matlab/${MATLAB_RELEASE}|" "$CONTAINER_HOME/mpm-input-${MATLAB_RELEASE,,}.txt"
+        
+        # ❌ REMOVED the 'sed' command that stripped the checksum line
+
+        # Run MPM inside the container, utilizing the isolated $HOME
         distrobox enter "$CONTAINER_NAME" -- bash -c "
-            mpm install --inputfile ~/mpm_input.txt
+            sudo /usr/local/bin/mpm install --inputfile \"\$HOME/mpm-input-${MATLAB_RELEASE,,}.txt\"
         "
     else
         echo "⚠️ File not found at '$DEFAULT_INPUT_FILE'. Skipping installation step."
