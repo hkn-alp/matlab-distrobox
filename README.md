@@ -35,7 +35,7 @@ chmod +x setup-matlab
 
 ```
 
-*The script will ask if you want to run `mpm install` immediately. Press `y` and it will automatically use the `mpm-input-r2026a.txt` file included in the repository.*
+*The script will ask if you want to run `mpm install` immediately. Press `y` and it will automatically use the `mpm-input-rXXXXy.txt` file included in the repository.*
 
 4. **Authenticate:**
 Once installed, launch MATLAB from your host desktop application grid or via the terminal wrapper. MATLAB will display an authentication link or open your host web browser automatically. Log in with your university/MathWorks credentials to activate your local session.
@@ -43,7 +43,7 @@ Once installed, launch MATLAB from your host desktop application grid or via the
 ## File Structure
 
 * `setup-matlab`: The core deployment script. Handles dependencies, container creation, and host integration.
-* `mpm-input.txt`: The configuration file dictating which products and toolboxes `mpm` will download. Safe to share publicly (contains no keys or personal data).
+* `mpm-inputrXXXXy.txt`: The configuration file dictating which products and toolboxes `mpm` will download. Safe to share publicly (contains no keys or personal data).
 
 ## Future Roadmap
 
