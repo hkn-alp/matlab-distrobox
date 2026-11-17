@@ -9,7 +9,9 @@ CONTAINER_STORAGE="$HOME/.local/share/containers"
 CONTAINER_HOME="$CONTAINER_STORAGE/distrobox-homes/$CONTAINER_NAME"
 APPS_DIR="$CONTAINER_STORAGE/apps"
 MATLAB_DIR="$APPS_DIR/matlab"
-MATLAB_RELEASE="R2026a"
+
+# 🎯 SINGLE SOURCE OF TRUTH FOR VERSION
+MATLAB_RELEASE="R2026b"
 
 echo "📁 Ensuring required host and theme directories exist..."
 mkdir -p \
@@ -43,7 +45,6 @@ else
 fi
 
 # 2. Install System Dependencies & MPM
-# Note: Ubuntu 24.04 ships with Python 3.12 natively; deadsnakes PPA is not needed.
 echo "📦 Installing Ubuntu 24.04 dependencies and mpm..."
 distrobox enter "$CONTAINER_NAME" -- bash -c '
     set -euo pipefail
@@ -70,11 +71,17 @@ echo ""
 read -rp "Do you want to run mpm install now? [y/N]: " RUN_MPM
 if [[ "$RUN_MPM" =~ ^[Yy]$ ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    DEFAULT_INPUT_FILE="$SCRIPT_DIR/mpm-input-r2026a.txt"
+    DEFAULT_INPUT_FILE="$SCRIPT_DIR/mpm-input.txt"
 
     if [ -f "$DEFAULT_INPUT_FILE" ]; then
         echo "⏳ Installing MATLAB via mpm using repository configuration..."
         cp "$DEFAULT_INPUT_FILE" "$CONTAINER_HOME/mpm_input.txt"
+
+        # Dynamically override the destination folder to match MATLAB_RELEASE
+        sed -i "s|^destinationFolder=.*|destinationFolder=/opt/apps/matlab/${MATLAB_RELEASE}|" "$CONTAINER_HOME/mpm_input.txt"
+        
+        # Strip the checksum line so MPM doesn't reject it for version mismatch
+        sed -i '/^?checksum=/d' "$CONTAINER_HOME/mpm_input.txt"
 
         distrobox enter "$CONTAINER_NAME" -- bash -c "
             mpm install --inputfile ~/mpm_input.txt
@@ -104,7 +111,7 @@ if [ -n "$FILE_PATH" ]; then
 
     if [ -d "$ABS_PATH" ]; then
         # Target is a directory: just start MATLAB in that directory
-        exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash -sd "$ABS_PATH"
+        exec distrobox enter astro -- /opt/apps/matlab/@@MATLAB_RELEASE@@/bin/matlab -desktop -nosplash -sd "$ABS_PATH"
     else
         # Target is a file: extract parent directory, start there, and open the file
         DIR_PATH=$(dirname "$ABS_PATH")
@@ -114,12 +121,15 @@ if [ -n "$FILE_PATH" ]; then
         # Combine cd() inside -r with -sd as a fallback so Startup settings don't override it
         CMD="try cd('$ESCAPED_DIR'); uiopen('$ESCAPED_FILE', true); catch ME; disp(ME.message); end"
 
-        exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash -sd "$DIR_PATH" -r "$CMD"
+        exec distrobox enter astro -- /opt/apps/matlab/@@MATLAB_RELEASE@@/bin/matlab -desktop -nosplash -sd "$DIR_PATH" -r "$CMD"
     fi
 else
-    exec distrobox enter astro -- /opt/apps/matlab/R2026a/bin/matlab -desktop -nosplash
+    exec distrobox enter astro -- /opt/apps/matlab/@@MATLAB_RELEASE@@/bin/matlab -desktop -nosplash
 fi
 MATLAB_LAUNCH_EOF
+
+# Inject the release variable safely into the wrapper script
+sed -i "s/@@MATLAB_RELEASE@@/${MATLAB_RELEASE}/g" "$MATLAB_DIR/matlab-launcher"
 
 chmod +x "$MATLAB_DIR/matlab-launcher"
 
@@ -132,10 +142,9 @@ Type=Application
 Name=MATLAB (Astro)
 Comment=MATLAB Technical Computing Environment
 Exec=$MATLAB_DIR/matlab-launcher %F
-Icon=$MATLAB_DIR/R2026a/ui/icons/16x16/matlabLogo.svg
-StartupWMClass=MATLAB R2026a
+Icon=$MATLAB_DIR/$MATLAB_RELEASE/ui/icons/16x16/matlabLogo.svg
+StartupWMClass=MATLAB $MATLAB_RELEASE
 Terminal=false
-Categories=Science;Education;Development;
 Categories=Science;Education;Development;
 MimeType=text/x-matlab;application/matlab;application/x-matlab-data;application/vnd.mathworks.simulink.model;
 MATLAB_DESKTOP_EOF
